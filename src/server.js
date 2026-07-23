@@ -4,16 +4,25 @@ const express = require("express");
 const cors = require("cors");
 
 const app = express();
-
+const orderRoutes =
+  require("./routes/orderRoutes");
 
 app.use(
   cors({
-    origin:
-      "https://decor-frontend-pi.vercel.app/",
+    origin: [
+      "http://localhost:5173",
+      "https://decor-frontend-pi.vercel.app"
+    ],
     credentials: true
   })
 );
 app.use(express.json());
+
+app.use(
+  "/api/orders",
+  orderRoutes
+);
+
 const sequelize =
   require("./config/db");
 
