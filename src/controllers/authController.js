@@ -8,7 +8,9 @@ exports.register = async (req, res) => {
     const {
       fullname,
       email,
-      password
+      password,
+      gender,
+      phone
     } = req.body;
 
     const existingUser =
@@ -29,10 +31,17 @@ exports.register = async (req, res) => {
       await User.create({
         fullname,
         email,
-        password: hashedPassword
+        password: hashedPassword,
+        gender:
+          ["male", "female", "other"].includes(gender)
+            ? gender
+            : null,
+        phone: phone || null
       });
 
-    res.status(201).json(user);
+    const safeUser = user.toJSON();
+    delete safeUser.password;
+    res.status(201).json(safeUser);
 
   } catch (error) {
 
@@ -85,9 +94,12 @@ exports.login = async (req, res) => {
       }
     );
 
+    const safeUser = user.toJSON();
+    delete safeUser.password;
+
     res.json({
       token,
-      user
+      user: safeUser
     });
 
   } catch (error) {
@@ -123,5 +135,46 @@ exports.getProfile = async (
       message: error.message
     });
 
+  }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    const {
+      fullname,
+      phone,
+      gender,
+      city,
+      district,
+      address
+    } = req.body;
+
+    await user.update({
+      fullname: String(fullname || "").trim() || user.fullname,
+      phone: String(phone || "").trim() || null,
+      gender:
+        ["male", "female", "other"].includes(gender)
+          ? gender
+          : null,
+      city: String(city || "").trim() || null,
+      district: String(district || "").trim() || null,
+      address: String(address || "").trim() || null
+    });
+
+    const safeUser = user.toJSON();
+    delete safeUser.password;
+    return res.json(safeUser);
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message
+    });
   }
 };

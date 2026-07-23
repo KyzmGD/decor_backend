@@ -3,7 +3,8 @@ const express = require("express");
 const {
   register,
   login,
-  getProfile
+  getProfile,
+  updateProfile
 } = require(
   "../controllers/authController"
 );
@@ -28,6 +29,12 @@ router.get(
   "/profile",
   protect,
   getProfile
+);
+
+router.put(
+  "/profile",
+  protect,
+  updateProfile
 );
 
 module.exports = router;
