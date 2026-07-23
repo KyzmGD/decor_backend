@@ -18,6 +18,23 @@ const Order = sequelize.define("Order", {
     defaultValue: "Pending"
   },
 
+  requiresStockConfirmation: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+
+  stockConfirmed: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+
+  stockConfirmedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+
   address: {
     type: DataTypes.STRING,
     allowNull: false
@@ -26,6 +43,46 @@ const Order = sequelize.define("Order", {
   phone: {
     type: DataTypes.STRING,
     allowNull: false
+  },
+
+  recipientName: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+
+  shippingMethod: {
+    type: DataTypes.ENUM(
+      "STANDARD",
+      "EXPRESS"
+    ),
+    allowNull: false,
+    defaultValue: "STANDARD"
+  },
+
+  paymentMethod: {
+    type: DataTypes.ENUM(
+      "COD",
+      "BANK_TRANSFER"
+    ),
+    allowNull: false,
+    defaultValue: "COD"
+  },
+
+  shippingFee: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    defaultValue: 0
+  },
+
+  discount: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    defaultValue: 0
+  },
+
+  note: {
+    type: DataTypes.TEXT,
+    allowNull: true
   }
 });
 
