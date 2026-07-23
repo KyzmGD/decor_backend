@@ -18,7 +18,9 @@ const {
   getMyOrders,
   getAllOrders,
   updateOrderStatus,
-  confirmLowStockOrder
+  confirmLowStockOrder,
+  cancelMyOrder,
+  confirmOrderReceived
 } = require(
   "../controllers/orderController"
 );
@@ -47,6 +49,18 @@ router.patch(
   auth,
   admin,
   confirmLowStockOrder
+);
+
+router.patch(
+  "/:id/cancel",
+  auth,
+  cancelMyOrder
+);
+
+router.patch(
+  "/:id/received",
+  auth,
+  confirmOrderReceived
 );
 
 router.put(

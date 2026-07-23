@@ -10,8 +10,10 @@ const Order = sequelize.define("Order", {
   status: {
     type: DataTypes.ENUM(
       "Pending",
-      "Processing",
+      "Confirmed",
+      "Preparing",
       "Shipping",
+      "Delivered",
       "Completed",
       "Cancelled"
     ),
