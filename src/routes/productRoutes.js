@@ -18,6 +18,11 @@ const protect =
 const admin =
   require("../middleware/adminMiddleware");
 
+const {
+  getReviews,
+  createReview
+} = require("../controllers/reviewController");
+
 router.get("/", getProducts);
 
 router.get("/:id", getProductById);
@@ -42,5 +47,9 @@ router.delete(
   admin,
   deleteProduct
 );
+
+// Review routes
+router.get("/:id/reviews", getReviews);
+router.post("/:id/reviews", protect, createReview);
 
 module.exports = router;
