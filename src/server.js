@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const { DataTypes } = require("sequelize");
 
 const app = express();
 const orderRoutes =
@@ -69,8 +70,43 @@ app.use(
 const PORT =
   process.env.PORT || 5000;
 
+const ensureOrderTimestampColumns = async () => {
+  const queryInterface =
+    sequelize.getQueryInterface();
+  const columns =
+    await queryInterface.describeTable("Orders");
+
+  const timestampColumns = {
+    confirmedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    shippingStartedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    deliveredAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    }
+  };
+
+  for (const [name, definition] of Object.entries(
+    timestampColumns
+  )) {
+    if (!columns[name]) {
+      await queryInterface.addColumn(
+        "Orders",
+        name,
+        definition
+      );
+    }
+  }
+};
+
 sequelize
-  .sync({ alter: true })
+  .sync()
+  .then(ensureOrderTimestampColumns)
   .then(() => {
 
     console.log(
