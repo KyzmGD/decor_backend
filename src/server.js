@@ -45,13 +45,6 @@ const productRoutes =
 const categoryRoutes =
   require("./routes/categoryRoutes");
 
-const {
-  Product,
-  Category
-} = require("./models");
-
-
-
 app.use(
   "/api/auth",
   authRoutes
