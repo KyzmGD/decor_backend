@@ -50,6 +50,11 @@ const User = sequelize.define("User", {
   address: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+
+  avatar: {
+    type: DataTypes.TEXT("medium"),
+    allowNull: true
   }
 });
 

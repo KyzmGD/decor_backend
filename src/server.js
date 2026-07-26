@@ -19,7 +19,7 @@ app.use(
     credentials: true
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 
 app.use(
   "/api/orders",
@@ -70,10 +70,10 @@ app.use(
 const PORT =
   process.env.PORT || 5000;
 
-const ensureOrderTimestampColumns = async () => {
+const ensureSchemaColumns = async () => {
   const queryInterface =
     sequelize.getQueryInterface();
-  const columns =
+  const orderColumns =
     await queryInterface.describeTable("Orders");
 
   const timestampColumns = {
@@ -94,7 +94,7 @@ const ensureOrderTimestampColumns = async () => {
   for (const [name, definition] of Object.entries(
     timestampColumns
   )) {
-    if (!columns[name]) {
+    if (!orderColumns[name]) {
       await queryInterface.addColumn(
         "Orders",
         name,
@@ -102,11 +102,25 @@ const ensureOrderTimestampColumns = async () => {
       );
     }
   }
+
+  const userColumns =
+    await queryInterface.describeTable("Users");
+
+  if (!userColumns.avatar) {
+    await queryInterface.addColumn(
+      "Users",
+      "avatar",
+      {
+        type: DataTypes.TEXT("medium"),
+        allowNull: true
+      }
+    );
+  }
 };
 
 sequelize
   .sync()
-  .then(ensureOrderTimestampColumns)
+  .then(ensureSchemaColumns)
   .then(() => {
 
     console.log(

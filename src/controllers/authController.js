@@ -154,8 +154,27 @@ exports.updateProfile = async (req, res) => {
       gender,
       city,
       district,
-      address
+      address,
+      avatar
     } = req.body;
+
+    const normalizedAvatar = String(avatar || "").trim();
+
+    if (
+      normalizedAvatar &&
+      !normalizedAvatar.startsWith("data:image/") &&
+      !normalizedAvatar.startsWith("https://")
+    ) {
+      return res.status(400).json({
+        message: "Invalid avatar"
+      });
+    }
+
+    if (normalizedAvatar.length > 1500000) {
+      return res.status(413).json({
+        message: "Avatar is too large"
+      });
+    }
 
     await user.update({
       fullname: String(fullname || "").trim() || user.fullname,
@@ -166,7 +185,8 @@ exports.updateProfile = async (req, res) => {
           : null,
       city: String(city || "").trim() || null,
       district: String(district || "").trim() || null,
-      address: String(address || "").trim() || null
+      address: String(address || "").trim() || null,
+      avatar: normalizedAvatar || null
     });
 
     const safeUser = user.toJSON();
