@@ -70,7 +70,7 @@ const PORT =
   process.env.PORT || 5000;
 
 sequelize
-  .sync({ alter: false })
+  .sync({ alter: true })
   .then(() => {
 
     console.log(

@@ -37,6 +37,21 @@ const Order = sequelize.define("Order", {
     allowNull: true
   },
 
+  confirmedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+
+  shippingStartedAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+
+  deliveredAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+
   address: {
     type: DataTypes.STRING,
     allowNull: false
