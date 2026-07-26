@@ -37,6 +37,12 @@ const productRoutes =
 const categoryRoutes =
   require("./routes/categoryRoutes");
 
+const wishlistRoutes =
+  require("./routes/wishlistRoutes");
+
+const cartRoutes =
+  require("./routes/cartRoutes");
+
 const {
   Product,
   Category
@@ -57,6 +63,16 @@ app.use(
 app.use(
   "/api/categories",
   categoryRoutes
+);
+
+app.use(
+  "/api/wishlist",
+  wishlistRoutes
+);
+
+app.use(
+  "/api/cart",
+  cartRoutes
 );
 
 const PORT =

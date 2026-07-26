@@ -2,9 +2,10 @@ require('dotenv').config();
 const sequelize = require('./src/config/db');
 require('./src/models/index');
 
-sequelize.sync({ alter: true })
+// Chỉ tạo bảng mới, không alter bảng cũ
+sequelize.sync({ force: false })
   .then(() => {
-    console.log('✅ Đã tạo/cập nhật bảng Reviews thành công!');
+    console.log('✅ Đã tạo bảng Wishlists và CartItems thành công!');
     process.exit(0);
   })
   .catch(err => {
