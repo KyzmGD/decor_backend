@@ -146,7 +146,8 @@ exports.createOrder = async (req, res) => {
         status: autoConfirmed ? "Confirmed" : "Pending",
         requiresStockConfirmation: !autoConfirmed,
         stockConfirmed: autoConfirmed,
-        stockConfirmedAt: autoConfirmed ? new Date() : null
+        stockConfirmedAt: autoConfirmed ? new Date() : null,
+        confirmedAt: autoConfirmed ? new Date() : null
       },
       { transaction }
     );
@@ -281,9 +282,24 @@ exports.updateOrderStatus = async (req, res) => {
       await restoreInventory(order, transaction);
     }
 
+    const statusTimestamps = {};
+
+    if (nextStatus === "Confirmed") {
+      statusTimestamps.confirmedAt = new Date();
+    }
+
+    if (nextStatus === "Shipping") {
+      statusTimestamps.shippingStartedAt = new Date();
+    }
+
+    if (nextStatus === "Delivered") {
+      statusTimestamps.deliveredAt = new Date();
+    }
+
     await order.update(
       {
         status: nextStatus,
+        ...statusTimestamps,
         ...(nextStatus === "Cancelled"
           ? {
               stockConfirmed: false,
@@ -367,6 +383,7 @@ exports.confirmLowStockOrder = async (req, res) => {
       {
         stockConfirmed: true,
         stockConfirmedAt: new Date(),
+        confirmedAt: new Date(),
         status: "Confirmed"
       },
       { transaction }
