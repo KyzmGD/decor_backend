@@ -1,9 +1,53 @@
-const { Op } = require("sequelize");
+const {
+  Op,
+  fn,
+  col
+} = require("sequelize");
 
 const {
   Product,
-  Category
+  Category,
+  Review
 } = require("../models");
+
+const attachReviewSummaries = async (products) => {
+  if (!products.length) {
+    return [];
+  }
+
+  const summaries = await Review.findAll({
+    attributes: [
+      "productId",
+      [fn("AVG", col("rating")), "rating"],
+      [fn("COUNT", col("id")), "reviewsCount"]
+    ],
+    where: {
+      productId: {
+        [Op.in]: products.map((product) => product.id)
+      }
+    },
+    group: ["productId"],
+    raw: true
+  });
+
+  const summaryByProduct = new Map(
+    summaries.map((summary) => [
+      Number(summary.productId),
+      {
+        rating: Number(summary.rating || 0),
+        reviewsCount: Number(summary.reviewsCount || 0)
+      }
+    ])
+  );
+
+  return products.map((product) => ({
+    ...product.toJSON(),
+    ...(summaryByProduct.get(Number(product.id)) || {
+      rating: 0,
+      reviewsCount: 0
+    })
+  }));
+};
 
 exports.getProducts =
   async (req, res) => {
@@ -46,7 +90,9 @@ exports.getProducts =
           ]
         });
 
-      res.json(products);
+      res.json(
+        await attachReviewSummaries(products)
+      );
 
     } catch (error) {
 
