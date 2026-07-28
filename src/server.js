@@ -19,7 +19,7 @@ app.use(
     credentials: true
   })
 );
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "25mb" }));
 
 app.use(
   "/api/orders",
@@ -119,6 +119,36 @@ const ensureSchemaColumns = async () => {
     await queryInterface.addColumn(
       "Users",
       "avatar",
+      {
+        type: DataTypes.TEXT("medium"),
+        allowNull: true
+      }
+    );
+  }
+
+  const productColumns =
+    await queryInterface.describeTable("Products");
+
+  if (!productColumns.images) {
+    await queryInterface.addColumn(
+      "Products",
+      "images",
+      {
+        type: DataTypes.JSON,
+        allowNull: true
+      }
+    );
+  }
+
+  if (
+    productColumns.image &&
+    !String(productColumns.image.type)
+      .toUpperCase()
+      .includes("TEXT")
+  ) {
+    await queryInterface.changeColumn(
+      "Products",
+      "image",
       {
         type: DataTypes.TEXT("medium"),
         allowNull: true

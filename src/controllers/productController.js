@@ -49,6 +49,21 @@ const attachReviewSummaries = async (products) => {
   }));
 };
 
+const normalizeImages = (body) => {
+  const submittedImages = Array.isArray(body.images)
+    ? body.images
+    : [];
+
+  return [
+    ...new Set(
+      [body.image, ...submittedImages]
+        .filter((image) => typeof image === "string")
+        .map((image) => image.trim())
+        .filter(Boolean)
+    )
+  ].slice(0, 8);
+};
+
 exports.getProducts =
   async (req, res) => {
 
@@ -147,6 +162,7 @@ exports.createProduct =
   async (req, res) => {
 
     try {
+      const images = normalizeImages(req.body);
 
       const product =
         await Product.create({
@@ -163,7 +179,9 @@ exports.createProduct =
             req.body.stock,
 
           image:
-            req.body.image,
+            images[0] || null,
+
+          images,
 
           categoryId:
             req.body.categoryId
@@ -187,6 +205,7 @@ exports.updateProduct =
   async (req, res) => {
 
     try {
+      const images = normalizeImages(req.body);
 
       const product =
         await Product.findByPk(
@@ -216,7 +235,9 @@ exports.updateProduct =
           req.body.stock,
 
         image:
-          req.body.image,
+          images[0] || null,
+
+        images,
 
         categoryId:
           req.body.categoryId
