@@ -1,3 +1,4 @@
+const { UniqueConstraintError } = require("sequelize");
 const sequelize = require("../config/db");
 const {
   Order,
@@ -10,45 +11,44 @@ const {
 const MIGRATION_KEY = "currency_vnd_conversion_v1";
 const LEGACY_USD_TO_VND_RATE = 26000;
 
-async function convertCurrencyToVnd() {
+const multiplyByLegacyRate = (column) =>
+  sequelize.literal(
+    `ROUND(${column} * ${LEGACY_USD_TO_VND_RATE}, 0)`
+  );
+
+const convertCurrencyToVnd = async () => {
+  if (await SystemSetting.findByPk(MIGRATION_KEY)) {
+    return { skipped: true };
+  }
+
   const transaction = await sequelize.transaction();
 
   try {
-    const completed = await SystemSetting.findByPk(
-      MIGRATION_KEY,
+    const marker = await SystemSetting.create(
       {
-        transaction,
-        lock: transaction.LOCK.UPDATE
-      }
+        key: MIGRATION_KEY,
+        value: "in-progress"
+      },
+      { transaction }
     );
 
-    if (completed) {
-      await transaction.commit();
-      return;
-    }
-
-    const multiply = (column) =>
-      sequelize.literal(
-        `ROUND(${column} * ${LEGACY_USD_TO_VND_RATE}, 0)`
-      );
-
-    await Product.update(
-      { price: multiply("price") },
+    const [products] = await Product.update(
+      { price: multiplyByLegacyRate("price") },
       { where: {}, transaction }
     );
-    await OrderItem.update(
-      { price: multiply("price") },
+    const [orderItems] = await OrderItem.update(
+      { price: multiplyByLegacyRate("price") },
       { where: {}, transaction }
     );
-    await Order.update(
+    const [orders] = await Order.update(
       {
-        totalPrice: multiply("totalPrice"),
-        shippingFee: multiply("shippingFee"),
-        discount: multiply("discount")
+        totalPrice: multiplyByLegacyRate("totalPrice"),
+        shippingFee: multiplyByLegacyRate("shippingFee"),
+        discount: multiplyByLegacyRate("discount")
       },
       { where: {}, transaction }
     );
-    await PaymentTransaction.update(
+    const [paymentTransactions] = await PaymentTransaction.update(
       {
         amount: sequelize.literal("transferAmountVnd"),
         currency: "VND",
@@ -57,9 +57,8 @@ async function convertCurrencyToVnd() {
       { where: {}, transaction }
     );
 
-    await SystemSetting.create(
+    await marker.update(
       {
-        key: MIGRATION_KEY,
         value: JSON.stringify({
           rate: LEGACY_USD_TO_VND_RATE,
           completedAt: new Date().toISOString()
@@ -69,13 +68,23 @@ async function convertCurrencyToVnd() {
     );
 
     await transaction.commit();
-    console.log(
-      `Converted existing monetary values to VND at ${LEGACY_USD_TO_VND_RATE} VND/USD`
-    );
+
+    return {
+      skipped: false,
+      products,
+      orderItems,
+      orders,
+      paymentTransactions
+    };
   } catch (error) {
     if (!transaction.finished) await transaction.rollback();
+
+    if (error instanceof UniqueConstraintError) {
+      return { skipped: true };
+    }
+
     throw error;
   }
-}
+};
 
 module.exports = convertCurrencyToVnd;
