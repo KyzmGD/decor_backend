@@ -8,7 +8,9 @@ const bankConfig = {
   bankName: process.env.BANK_NAME || "VietinBank",
   bankCode: process.env.BANK_CODE || "ICB",
   bankAccount:
-    process.env.BANK_ACCOUNT_NUMBER || "100844608386",
+    String(
+      process.env.BANK_ACCOUNT_NUMBER || "100844608386"
+    ).replace(/\s/g, ""),
   accountName:
     process.env.BANK_ACCOUNT_NAME || "NGUYEN NGOC TUAN LINH"
 };

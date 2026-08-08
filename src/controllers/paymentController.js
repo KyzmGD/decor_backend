@@ -25,8 +25,9 @@ const extractReference = (payload) => {
     payload.content,
     payload.description
   ].filter(Boolean).join(" ").toUpperCase();
+  const match = text.match(/WOODORA[\s._-]*(\d+)/);
 
-  return text.match(/WOODORA\d+/)?.[0] || null;
+  return match ? `WOODORA${match[1]}` : null;
 };
 
 exports.getMyTransactions = async (req, res) => {
@@ -40,6 +41,7 @@ exports.getMyTransactions = async (req, res) => {
       order: [["createdAt", "DESC"]]
     });
 
+    res.set("Cache-Control", "no-store");
     return res.json(transactions);
   } catch (error) {
     return res.status(500).json({ message: error.message });
