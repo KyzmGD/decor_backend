@@ -7,6 +7,7 @@ const OrderStatusHistory = require("./OrderStatusHistory");
 const Review = require("./Review");
 const Wishlist = require("./Wishlist");
 const CartItem = require("./CartItem");
+const PaymentTransaction = require("./PaymentTransaction");
 
 User.hasMany(Order);
 
@@ -24,6 +25,22 @@ Order.hasMany(OrderStatusHistory, {
 
 OrderStatusHistory.belongsTo(Order, {
   foreignKey: "orderId"
+});
+
+Order.hasMany(PaymentTransaction, {
+  as: "transactions",
+  foreignKey: "orderId",
+  onDelete: "CASCADE"
+});
+PaymentTransaction.belongsTo(Order, {
+  foreignKey: "orderId"
+});
+User.hasMany(PaymentTransaction, {
+  as: "paymentTransactions",
+  foreignKey: "userId"
+});
+PaymentTransaction.belongsTo(User, {
+  foreignKey: "userId"
 });
 
 Product.hasMany(OrderItem);
@@ -64,5 +81,6 @@ module.exports = {
   OrderStatusHistory,
   Review,
   Wishlist,
-  CartItem
+  CartItem,
+  PaymentTransaction
 };

@@ -14,6 +14,8 @@ const orderRoutes =
   require("./routes/orderRoutes");
 const reviewRoutes =
   require("./routes/reviewRoutes");
+const paymentRoutes =
+  require("./routes/paymentRoutes");
 
 app.use(
   cors({
@@ -34,6 +36,11 @@ app.use(
 app.use(
   "/api/reviews",
   reviewRoutes
+);
+
+app.use(
+  "/api/payments",
+  paymentRoutes
 );
 
 const sequelize =
@@ -108,6 +115,22 @@ const ensureSchemaColumns = async () => {
       allowNull: true
     },
     deliveredAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    paymentStatus: {
+      type: DataTypes.ENUM(
+        "NOT_REQUIRED",
+        "PENDING",
+        "PAID",
+        "FAILED",
+        "CANCELLED",
+        "REFUNDED"
+      ),
+      allowNull: false,
+      defaultValue: "NOT_REQUIRED"
+    },
+    paymentPaidAt: {
       type: DataTypes.DATE,
       allowNull: true
     }

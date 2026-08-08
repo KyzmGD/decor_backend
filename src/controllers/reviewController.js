@@ -12,6 +12,7 @@ exports.getReviews = async (req, res) => {
     // Map về đúng shape mà Frontend đang dùng
     const result = reviews.map((r) => ({
       id: r.id,
+      userId: r.userId,
       name: r.name,
       rating: r.rating,
       comment: r.comment,
@@ -53,6 +54,7 @@ exports.createReview = async (req, res) => {
 
     res.status(201).json({
       id: review.id,
+      userId: review.userId,
       name: review.name,
       rating: review.rating,
       comment: review.comment,
@@ -60,5 +62,29 @@ exports.createReview = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE /api/reviews/:reviewId - User xóa đánh giá của mình, admin xóa mọi đánh giá
+exports.deleteReview = async (req, res) => {
+  try {
+    const review = await Review.findByPk(req.params.reviewId);
+
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    const ownsReview = Number(review.userId) === Number(req.user.id);
+
+    if (!ownsReview && req.user.role !== "admin") {
+      return res.status(403).json({
+        message: "You can only delete your own reviews"
+      });
+    }
+
+    await review.destroy();
+    return res.json({ message: "Review deleted successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };

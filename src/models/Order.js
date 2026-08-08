@@ -85,6 +85,24 @@ const Order = sequelize.define("Order", {
     defaultValue: "COD"
   },
 
+  paymentStatus: {
+    type: DataTypes.ENUM(
+      "NOT_REQUIRED",
+      "PENDING",
+      "PAID",
+      "FAILED",
+      "CANCELLED",
+      "REFUNDED"
+    ),
+    allowNull: false,
+    defaultValue: "NOT_REQUIRED"
+  },
+
+  paymentPaidAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+
   shippingFee: {
     type: DataTypes.FLOAT,
     allowNull: false,

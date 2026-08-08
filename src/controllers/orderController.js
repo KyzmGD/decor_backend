@@ -2,10 +2,15 @@ const {
   Order,
   OrderItem,
   OrderStatusHistory,
+  PaymentTransaction,
   Product,
   User
 } = require("../models");
 const sequelize = require("../config/db");
+const {
+  createPendingBankTransfer,
+  transactionInclude
+} = require("../services/paymentService");
 
 const STATUS_TRANSITIONS = {
   Pending: ["Confirmed", "Cancelled"],
@@ -26,8 +31,18 @@ const statusHistoryInclude = {
 
 const getOrderWithHistory = (orderId) =>
   Order.findByPk(orderId, {
-    include: [statusHistoryInclude]
+    include: [statusHistoryInclude, transactionInclude]
   });
+
+async function cancelPendingPayments(orderId, transaction) {
+  await PaymentTransaction.update(
+    { status: "CANCELLED" },
+    {
+      where: { orderId, status: "PENDING" },
+      transaction
+    }
+  );
+}
 
 async function restoreInventory(order, transaction) {
   if (!order.stockConfirmed) {
@@ -137,6 +152,16 @@ exports.createOrder = async (req, res) => {
       String(couponCode || "").toUpperCase() === "WOODORA10"
         ? subtotal * 0.1
         : 0;
+    const validatedPaymentMethod =
+      paymentMethod === "BANK_TRANSFER"
+        ? "BANK_TRANSFER"
+        : "COD";
+    const initialStatus =
+      validatedPaymentMethod === "BANK_TRANSFER"
+        ? "Pending"
+        : autoConfirmed
+          ? "Confirmed"
+          : "Pending";
 
     const order = await Order.create(
       {
@@ -148,19 +173,21 @@ exports.createOrder = async (req, res) => {
         phone,
         recipientName,
         shippingMethod: validatedShippingMethod,
-        paymentMethod:
-          paymentMethod === "BANK_TRANSFER"
-            ? "BANK_TRANSFER"
-            : "COD",
+        paymentMethod: validatedPaymentMethod,
+        paymentStatus:
+          validatedPaymentMethod === "BANK_TRANSFER"
+            ? "PENDING"
+            : "NOT_REQUIRED",
         shippingFee: validatedShippingFee,
         discount: validatedDiscount,
         note: note || null,
         UserId: req.user.id,
-        status: autoConfirmed ? "Confirmed" : "Pending",
+        status: initialStatus,
         requiresStockConfirmation: !autoConfirmed,
         stockConfirmed: autoConfirmed,
         stockConfirmedAt: autoConfirmed ? new Date() : null,
-        confirmedAt: autoConfirmed ? new Date() : null
+        confirmedAt:
+          initialStatus === "Confirmed" ? new Date() : null
       },
       { transaction }
     );
@@ -198,8 +225,16 @@ exports.createOrder = async (req, res) => {
       }
     }
 
+    if (validatedPaymentMethod === "BANK_TRANSFER") {
+      await createPendingBankTransfer(
+        order,
+        req.user.id,
+        transaction
+      );
+    }
+
     await transaction.commit();
-    return res.status(201).json(order);
+    return res.status(201).json(await getOrderWithHistory(order.id));
   } catch (error) {
     if (!transaction.finished) await transaction.rollback();
     return res.status(500).json({
@@ -219,7 +254,8 @@ exports.getMyOrders = async (req, res) => {
           model: OrderItem,
           include: [Product]
         },
-        statusHistoryInclude
+        statusHistoryInclude,
+        transactionInclude
       ],
       order: [["createdAt", "DESC"]]
     });
@@ -245,7 +281,8 @@ exports.getAllOrders = async (req, res) => {
         {
           model: OrderItem,
           include: [Product]
-        }
+        },
+        transactionInclude
       ],
       order: [["createdAt", "DESC"]]
     });
@@ -301,8 +338,21 @@ exports.updateOrderStatus = async (req, res) => {
       });
     }
 
+    if (
+      nextStatus === "Confirmed" &&
+      order.paymentMethod === "BANK_TRANSFER" &&
+      order.paymentStatus !== "PAID"
+    ) {
+      await transaction.rollback();
+      return res.status(409).json({
+        message: "Bank transfer payment has not been confirmed",
+        code: "PAYMENT_REQUIRED"
+      });
+    }
+
     if (nextStatus === "Cancelled") {
       await restoreInventory(order, transaction);
+      await cancelPendingPayments(order.id, transaction);
     }
 
     const statusTimestamps = {};
@@ -327,7 +377,10 @@ exports.updateOrderStatus = async (req, res) => {
         ...(nextStatus === "Cancelled"
           ? {
               stockConfirmed: false,
-              stockConfirmedAt: null
+              stockConfirmedAt: null,
+              ...(order.paymentStatus === "PENDING"
+                ? { paymentStatus: "CANCELLED" }
+                : {})
             }
           : {})
       },
@@ -413,24 +466,29 @@ exports.confirmLowStockOrder = async (req, res) => {
     }
 
     const changedAt = new Date();
+    const canMoveToConfirmed =
+      order.paymentMethod !== "BANK_TRANSFER" ||
+      order.paymentStatus === "PAID";
     await order.update(
       {
         stockConfirmed: true,
         stockConfirmedAt: changedAt,
-        confirmedAt: changedAt,
-        status: "Confirmed"
+        confirmedAt: canMoveToConfirmed ? changedAt : null,
+        status: canMoveToConfirmed ? "Confirmed" : "Pending"
       },
       { transaction }
     );
 
-    await OrderStatusHistory.create(
-      {
-        orderId: order.id,
-        status: "Confirmed",
-        changedAt
-      },
-      { transaction }
-    );
+    if (canMoveToConfirmed) {
+      await OrderStatusHistory.create(
+        {
+          orderId: order.id,
+          status: "Confirmed",
+          changedAt
+        },
+        { transaction }
+      );
+    }
 
     await transaction.commit();
     return res.json(await getOrderWithHistory(order.id));
@@ -473,11 +531,15 @@ exports.cancelMyOrder = async (req, res) => {
     }
 
     await restoreInventory(order, transaction);
+    await cancelPendingPayments(order.id, transaction);
     await order.update(
       {
         status: "Cancelled",
         stockConfirmed: false,
-        stockConfirmedAt: null
+        stockConfirmedAt: null,
+        ...(order.paymentStatus === "PENDING"
+          ? { paymentStatus: "CANCELLED" }
+          : {})
       },
       { transaction }
     );
