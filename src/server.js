@@ -8,6 +8,8 @@ const {
 } = require("./scripts/backfillProductImages");
 const backfillOrderStatusHistory =
   require("./scripts/backfillOrderStatusHistory");
+const convertCurrencyToVnd =
+  require("./scripts/convertCurrencyToVnd");
 
 const app = express();
 const orderRoutes =
@@ -148,6 +150,14 @@ const ensureSchemaColumns = async () => {
     }
   }
 
+  if (orderColumns.paymentStatus) {
+    await queryInterface.changeColumn(
+      "Orders",
+      "paymentStatus",
+      timestampColumns.paymentStatus
+    );
+  }
+
   const userColumns =
     await queryInterface.describeTable("Users");
 
@@ -207,6 +217,7 @@ const ensureSchemaColumns = async () => {
 sequelize
   .sync()
   .then(ensureSchemaColumns)
+  .then(convertCurrencyToVnd)
   .then(backfillOrderStatusHistory)
   .then(backfillProductImages)
   .then(() => {

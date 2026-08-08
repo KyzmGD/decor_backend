@@ -38,7 +38,7 @@ const PaymentTransaction = sequelize.define("PaymentTransaction", {
   currency: {
     type: DataTypes.STRING(3),
     allowNull: false,
-    defaultValue: "USD"
+    defaultValue: "VND"
   },
 
   transferAmountVnd: {
@@ -48,7 +48,8 @@ const PaymentTransaction = sequelize.define("PaymentTransaction", {
 
   exchangeRate: {
     type: DataTypes.DECIMAL(15, 2),
-    allowNull: false
+    allowNull: false,
+    defaultValue: 1
   },
 
   status: {

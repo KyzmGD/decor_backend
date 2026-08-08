@@ -8,6 +8,7 @@ const Review = require("./Review");
 const Wishlist = require("./Wishlist");
 const CartItem = require("./CartItem");
 const PaymentTransaction = require("./PaymentTransaction");
+const SystemSetting = require("./SystemSetting");
 
 User.hasMany(Order);
 
@@ -82,5 +83,6 @@ module.exports = {
   Review,
   Wishlist,
   CartItem,
-  PaymentTransaction
+  PaymentTransaction,
+  SystemSetting
 };

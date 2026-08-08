@@ -13,16 +13,6 @@ const bankConfig = {
     process.env.BANK_ACCOUNT_NAME || "NGUYEN NGOC TUAN LINH"
 };
 
-const getExchangeRate = () => {
-  const rate = Number(process.env.BANK_TRANSFER_VND_PER_USD || 26000);
-
-  if (!Number.isFinite(rate) || rate <= 0) {
-    throw new Error("BANK_TRANSFER_VND_PER_USD must be a positive number");
-  }
-
-  return rate;
-};
-
 const buildQrCodeUrl = ({ amount, transferContent }) => {
   const path = [
     bankConfig.bankCode,
@@ -43,10 +33,7 @@ const createPendingBankTransfer = async (
   userId,
   transaction
 ) => {
-  const exchangeRate = getExchangeRate();
-  const transferAmountVnd = Math.round(
-    Number(order.totalPrice) * exchangeRate
-  );
+  const transferAmountVnd = Math.round(Number(order.totalPrice));
   const transferContent = `WOODORA${order.id}`;
 
   return PaymentTransaction.create(
@@ -55,9 +42,9 @@ const createPendingBankTransfer = async (
       userId,
       reference: transferContent,
       amount: order.totalPrice,
-      currency: "USD",
+      currency: "VND",
       transferAmountVnd,
-      exchangeRate,
+      exchangeRate: 1,
       bankName: bankConfig.bankName,
       bankAccount: bankConfig.bankAccount,
       accountName: bankConfig.accountName,

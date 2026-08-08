@@ -147,7 +147,7 @@ exports.createOrder = async (req, res) => {
         ? "EXPRESS"
         : "STANDARD";
     const validatedShippingFee =
-      validatedShippingMethod === "EXPRESS" ? 15 : 0;
+      validatedShippingMethod === "EXPRESS" ? 390000 : 0;
     const validatedDiscount =
       String(couponCode || "").toUpperCase() === "WOODORA10"
         ? subtotal * 0.1
