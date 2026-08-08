@@ -51,6 +51,9 @@ const wishlistRoutes =
 const cartRoutes =
   require("./routes/cartRoutes");
 
+const adminAccountRoutes =
+  require("./routes/adminAccountRoutes");
+
 app.use(
   "/api/auth",
   authRoutes
@@ -74,6 +77,11 @@ app.use(
 app.use(
   "/api/cart",
   cartRoutes
+);
+
+app.use(
+  "/api/admin/accounts",
+  adminAccountRoutes
 );
 
 const PORT =
@@ -121,6 +129,17 @@ const ensureSchemaColumns = async () => {
       "avatar",
       {
         type: DataTypes.TEXT("medium"),
+        allowNull: true
+      }
+    );
+  }
+
+  if (!userColumns.lastLoginAt) {
+    await queryInterface.addColumn(
+      "Users",
+      "lastLoginAt",
+      {
+        type: DataTypes.DATE,
         allowNull: true
       }
     );

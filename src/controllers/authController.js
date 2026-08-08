@@ -83,6 +83,10 @@ exports.login = async (req, res) => {
       });
     }
 
+    await user.update({
+      lastLoginAt: new Date()
+    });
+
     const token = jwt.sign(
       {
         id: user.id,

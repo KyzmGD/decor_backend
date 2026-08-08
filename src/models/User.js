@@ -23,6 +23,11 @@ const User = sequelize.define("User", {
     defaultValue: "user"
   },
 
+  lastLoginAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+
   gender: {
     type: DataTypes.ENUM(
       "male",
