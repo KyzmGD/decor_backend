@@ -3,6 +3,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { DataTypes } = require("sequelize");
+const {
+  backfillProductImages
+} = require("./scripts/backfillProductImages");
 
 const app = express();
 const orderRoutes =
@@ -179,6 +182,7 @@ const ensureSchemaColumns = async () => {
 sequelize
   .sync()
   .then(ensureSchemaColumns)
+  .then(backfillProductImages)
   .then(() => {
 
     console.log(
