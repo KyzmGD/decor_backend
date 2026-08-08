@@ -6,6 +6,8 @@ const { DataTypes } = require("sequelize");
 const {
   backfillProductImages
 } = require("./scripts/backfillProductImages");
+const backfillOrderStatusHistory =
+  require("./scripts/backfillOrderStatusHistory");
 
 const app = express();
 const orderRoutes =
@@ -182,6 +184,7 @@ const ensureSchemaColumns = async () => {
 sequelize
   .sync()
   .then(ensureSchemaColumns)
+  .then(backfillOrderStatusHistory)
   .then(backfillProductImages)
   .then(() => {
 

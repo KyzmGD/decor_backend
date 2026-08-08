@@ -1,6 +1,7 @@
 const {
   Order,
   OrderItem,
+  OrderStatusHistory,
   Product,
   User
 } = require("../models");
@@ -15,6 +16,18 @@ const STATUS_TRANSITIONS = {
   Completed: [],
   Cancelled: []
 };
+
+const statusHistoryInclude = {
+  model: OrderStatusHistory,
+  as: "statusHistory",
+  separate: true,
+  order: [["changedAt", "ASC"]]
+};
+
+const getOrderWithHistory = (orderId) =>
+  Order.findByPk(orderId, {
+    include: [statusHistoryInclude]
+  });
 
 async function restoreInventory(order, transaction) {
   if (!order.stockConfirmed) {
@@ -152,6 +165,15 @@ exports.createOrder = async (req, res) => {
       { transaction }
     );
 
+    await OrderStatusHistory.create(
+      {
+        orderId: order.id,
+        status: order.status,
+        changedAt: order.createdAt
+      },
+      { transaction }
+    );
+
     for (const item of items) {
       const product = productMap.get(Number(item.id));
 
@@ -179,7 +201,7 @@ exports.createOrder = async (req, res) => {
     await transaction.commit();
     return res.status(201).json(order);
   } catch (error) {
-    await transaction.rollback();
+    if (!transaction.finished) await transaction.rollback();
     return res.status(500).json({
       message: error.message
     });
@@ -196,7 +218,8 @@ exports.getMyOrders = async (req, res) => {
         {
           model: OrderItem,
           include: [Product]
-        }
+        },
+        statusHistoryInclude
       ],
       order: [["createdAt", "DESC"]]
     });
@@ -283,17 +306,18 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     const statusTimestamps = {};
+    const changedAt = new Date();
 
     if (nextStatus === "Confirmed") {
-      statusTimestamps.confirmedAt = new Date();
+      statusTimestamps.confirmedAt = changedAt;
     }
 
     if (nextStatus === "Shipping") {
-      statusTimestamps.shippingStartedAt = new Date();
+      statusTimestamps.shippingStartedAt = changedAt;
     }
 
     if (nextStatus === "Delivered") {
-      statusTimestamps.deliveredAt = new Date();
+      statusTimestamps.deliveredAt = changedAt;
     }
 
     await order.update(
@@ -310,10 +334,19 @@ exports.updateOrderStatus = async (req, res) => {
       { transaction }
     );
 
+    await OrderStatusHistory.create(
+      {
+        orderId: order.id,
+        status: nextStatus,
+        changedAt
+      },
+      { transaction }
+    );
+
     await transaction.commit();
-    return res.json(order);
+    return res.json(await getOrderWithHistory(order.id));
   } catch (error) {
-    await transaction.rollback();
+    if (!transaction.finished) await transaction.rollback();
     return res.status(500).json({
       message: error.message
     });
@@ -379,20 +412,30 @@ exports.confirmLowStockOrder = async (req, res) => {
       );
     }
 
+    const changedAt = new Date();
     await order.update(
       {
         stockConfirmed: true,
-        stockConfirmedAt: new Date(),
-        confirmedAt: new Date(),
+        stockConfirmedAt: changedAt,
+        confirmedAt: changedAt,
         status: "Confirmed"
       },
       { transaction }
     );
 
+    await OrderStatusHistory.create(
+      {
+        orderId: order.id,
+        status: "Confirmed",
+        changedAt
+      },
+      { transaction }
+    );
+
     await transaction.commit();
-    return res.json(order);
+    return res.json(await getOrderWithHistory(order.id));
   } catch (error) {
-    await transaction.rollback();
+    if (!transaction.finished) await transaction.rollback();
     return res.status(500).json({
       message: error.message
     });
@@ -439,10 +482,19 @@ exports.cancelMyOrder = async (req, res) => {
       { transaction }
     );
 
+    await OrderStatusHistory.create(
+      {
+        orderId: order.id,
+        status: "Cancelled",
+        changedAt: new Date()
+      },
+      { transaction }
+    );
+
     await transaction.commit();
-    return res.json(order);
+    return res.json(await getOrderWithHistory(order.id));
   } catch (error) {
-    await transaction.rollback();
+    if (!transaction.finished) await transaction.rollback();
     return res.status(500).json({
       message: error.message
     });
@@ -450,32 +502,50 @@ exports.cancelMyOrder = async (req, res) => {
 };
 
 exports.confirmOrderReceived = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
   try {
     const order = await Order.findOne({
       where: {
         id: req.params.id,
         UserId: req.user.id
-      }
+      },
+      transaction,
+      lock: transaction.LOCK.UPDATE
     });
 
     if (!order) {
+      await transaction.rollback();
       return res.status(404).json({
         message: "Order not found"
       });
     }
 
     if (order.status !== "Delivered") {
+      await transaction.rollback();
       return res.status(409).json({
         message: "Only delivered orders can be completed"
       });
     }
 
-    await order.update({
-      status: "Completed"
-    });
+    const changedAt = new Date();
+    await order.update(
+      { status: "Completed" },
+      { transaction }
+    );
+    await OrderStatusHistory.create(
+      {
+        orderId: order.id,
+        status: "Completed",
+        changedAt
+      },
+      { transaction }
+    );
 
-    return res.json(order);
+    await transaction.commit();
+    return res.json(await getOrderWithHistory(order.id));
   } catch (error) {
+    if (!transaction.finished) await transaction.rollback();
     return res.status(500).json({
       message: error.message
     });

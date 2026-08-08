@@ -3,6 +3,7 @@ const Product = require("./Product");
 const Category = require("./Category");
 const Order = require("./Order");
 const OrderItem = require("./OrderItem");
+const OrderStatusHistory = require("./OrderStatusHistory");
 const Review = require("./Review");
 const Wishlist = require("./Wishlist");
 const CartItem = require("./CartItem");
@@ -14,6 +15,16 @@ Order.belongsTo(User);
 Order.hasMany(OrderItem);
 
 OrderItem.belongsTo(Order);
+
+Order.hasMany(OrderStatusHistory, {
+  as: "statusHistory",
+  foreignKey: "orderId",
+  onDelete: "CASCADE"
+});
+
+OrderStatusHistory.belongsTo(Order, {
+  foreignKey: "orderId"
+});
 
 Product.hasMany(OrderItem);
 
@@ -50,6 +61,7 @@ module.exports = {
   Category,
   Order,
   OrderItem,
+  OrderStatusHistory,
   Review,
   Wishlist,
   CartItem
