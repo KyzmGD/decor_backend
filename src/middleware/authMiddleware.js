@@ -41,6 +41,12 @@ const protect =
           decoded.id
         );
 
+      if (!req.user) {
+        return res.status(401).json({
+          message: "Invalid token"
+        });
+      }
+
       next();
 
     } catch (error) {
